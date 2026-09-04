@@ -2,6 +2,8 @@
 
 玩家自制的命运之轮（命轮盘）规划工具：录入命轮碎片库存、自选碎片与限定角色碎片，一键生成 **MILP 认证最优** 的点亮/升星/进阶方案。支持移动端与 PC 双布局。
 
+**在线体验**：http://101.132.145.199/longzu/minglun/v2/ · **仓库**：https://github.com/ZoeyHao/longzu-minglun-assistant
+
 > 本项目与游戏官方无关，仅供玩家交流使用。
 
 ## 功能
@@ -13,7 +15,7 @@
 - **角色碎片 ∞ 开关**：常驻 SSR 默认无限、限定 SSR 默认按 0，逐角色可切换
 - **MILP 求解**：按字典序目标链（如 精神元素 → 精神元素% → 消耗 → …）逐目标认证最优，输出 `optimal` 即数学证明的全局最优
 - **自选碎片分配**：按缺口（需求 − 库存）取 top5 分配；含限定 SSR/UR 的组合按可进阶轮次计需求，无角色碎片 = 不能进阶只计第 1 轮
-- **历史方案**：昵称必填、自动存档（服务器保留最近 100 条），支持查看与一键载入库存
+- **私有历史方案**：计算无需昵称；用户主动保存后，服务器仅向当前浏览器的私有访问令牌返回记录，支持查看与一键载入库存
 - **数据明细**：198 个组合全表（元素/轮盘筛选 + 搜索），支持下载 Excel
 
 ## 计算口径
@@ -22,6 +24,8 @@
 - 基础效果按每升 1 星累计；进阶效果每完成一次真实进阶计一次（当前仅精神元素页提供）
 - 进阶角色碎片成本：绘梨衣 15/次，其余限定 SSR 与 UR 30/次；常驻 SSR / SR / R 默认视为无限
 - 所有组合默认从白 0 星开始规划
+
+> 当前版本还不能录入各组合已经达到的品阶/星级。老账号应把结果理解为“以现有剩余库存重新从白 0 星建模”的理论方案，而不是精确的跨阶结算。
 
 ## 本地运行
 
@@ -45,7 +49,10 @@ pip install -r requirements.txt
 ## 测试
 
 ```bash
-python3 server/test_engine.py   # 自选缺口口径单元测试
+npm run lint
+npm run build
+python3 server/test_engine.py   # 自选缺口与进阶效果口径单元测试
+python3 server/test_api_server.py  # 历史方案隔离与保留策略
 ```
 
 ## 服务器部署（生产）
@@ -53,7 +60,7 @@ python3 server/test_engine.py   # 自选缺口口径单元测试
 - `server/api_server.py`：纯标准库 HTTP 服务（默认 127.0.0.1:8321），路由：
   - `GET /api/game-data` 游戏数据 · `GET /api/combos` 组合明细 · `GET /api/combos.xlsx` Excel 导出
   - `POST /api/plan` 求解 · `POST /api/recognize` 截图识别
-  - `GET/POST/DELETE /api/history` 历史方案（存于 `history.json`，可用 `MINGLUN_HISTORY_FILE` 改路径）
+  - `GET/POST/DELETE /api/history` 私有历史方案（请求必须携带浏览器生成的 `X-Minglun-Owner`；服务端只保存其 SHA-256）
 - 前端静态构建：`npx vite build --base=<你的部署路径>/`
 - 建议 nginx 反代 `/api/` 到 8321，systemd 托管 `api_server.py`；环境变量：`MINGLUN_SKILL_DIR`（数据目录，默认 `server/skill`）、`MINGLUN_RECOGNIZER_DIR`、`MINGLUN_PORT`
 
