@@ -13,6 +13,7 @@ export interface GameData {
   elements: string[]
   wheels: string[]
   combo_counts: Record<string, number>
+  combo_total: number
   recognizable_count: number
   recognizable_note: string
 }

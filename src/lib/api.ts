@@ -55,24 +55,28 @@ export interface HistoryRecord extends HistorySummary {
   result: PlanResult
 }
 
-export async function fetchHistory(nick?: string): Promise<HistorySummary[]> {
-  const res = await fetch(`${API}/history${nick ? `?nick=${encodeURIComponent(nick)}` : ''}`)
+const historyHeaders = (ownerToken: string) => ({ 'X-Minglun-Owner': ownerToken })
+
+export async function fetchHistory(ownerToken: string, nick?: string): Promise<HistorySummary[]> {
+  const res = await fetch(`${API}/history${nick ? `?nick=${encodeURIComponent(nick)}` : ''}`, {
+    headers: historyHeaders(ownerToken),
+  })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || `历史加载失败（${res.status}）`)
   return data.records
 }
 
-export async function fetchHistoryRecord(id: number): Promise<HistoryRecord> {
-  const res = await fetch(`${API}/history?id=${id}`)
+export async function fetchHistoryRecord(id: number, ownerToken: string): Promise<HistoryRecord> {
+  const res = await fetch(`${API}/history?id=${id}`, { headers: historyHeaders(ownerToken) })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || `记录加载失败（${res.status}）`)
   return data.record
 }
 
-export async function saveHistory(nick: string, payload: PlanPayload, result: PlanResult): Promise<number> {
+export async function saveHistory(ownerToken: string, nick: string, payload: PlanPayload, result: PlanResult): Promise<number> {
   const res = await fetch(`${API}/history`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...historyHeaders(ownerToken) },
     body: JSON.stringify({ nick, payload, result }),
   })
   const data = await res.json()
@@ -80,11 +84,11 @@ export async function saveHistory(nick: string, payload: PlanPayload, result: Pl
   return data.id
 }
 
-export async function deleteHistory(id: number, nick: string): Promise<void> {
+export async function deleteHistory(id: number, ownerToken: string): Promise<void> {
   const res = await fetch(`${API}/history`, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id, nick }),
+    headers: { 'Content-Type': 'application/json', ...historyHeaders(ownerToken) },
+    body: JSON.stringify({ id }),
   })
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || `删除失败（${res.status}）`)

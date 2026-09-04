@@ -2,6 +2,7 @@ import path from "path"
 import fs from "fs"
 import os from "os"
 import { spawn } from "child_process"
+import { createHash } from "crypto"
 import react from "@vitejs/plugin-react"
 import { defineConfig, type Plugin } from "vite"
 import { inspectAttr } from 'kimi-plugin-inspect-react'
@@ -17,9 +18,11 @@ const PYTHON_CANDIDATES = [
 const SERVER_DIR = path.resolve(__dirname, "server")
 const HISTORY_FILE = path.join(SERVER_DIR, "history.json")
 const MAX_HISTORY = 100
+const MAX_HISTORY_TOTAL = 5000
 
 interface HistoryRec {
   id: number
+  owner_hash: string
   nick: string
   ts: number
   payload: Record<string, unknown>
@@ -40,6 +43,12 @@ function saveHistory(records: HistoryRec[]) {
   fs.renameSync(tmp, HISTORY_FILE)
 }
 
+function appendHistory(records: HistoryRec[], rec: HistoryRec) {
+  const mine = records.filter((item) => item.owner_hash === rec.owner_hash).slice(-(MAX_HISTORY - 1))
+  const others = records.filter((item) => item.owner_hash !== rec.owner_hash)
+  return [...others, ...mine, rec].sort((a, b) => a.ts - b.ts).slice(-MAX_HISTORY_TOTAL)
+}
+
 function summarize(rec: HistoryRec) {
   const r = (rec.result || {}) as { main_element?: string; elements?: string[]; stars_lit?: number; fragments_consumed?: number; totals?: Record<string, number> }
   const main = r.main_element || ""
@@ -58,6 +67,13 @@ function summarize(rec: HistoryRec) {
   }
 }
 
+function historyOwnerHash(req: import("http").IncomingMessage): string | null {
+  const raw = req.headers["x-minglun-owner"]
+  const token = String(Array.isArray(raw) ? raw[0] : raw || "").trim()
+  if (token.length < 24 || token.length > 160) return null
+  return createHash("sha256").update(token).digest("hex")
+}
+
 function runPython(script: string, args: string[], timeoutMs: number): Promise<string> {
   return new Promise((resolve, reject) => {
     let settled = false
@@ -67,6 +83,7 @@ function runPython(script: string, args: string[], timeoutMs: number): Promise<s
         return
       }
       const py = PYTHON_CANDIDATES[idx]
+      let attemptFailed = false
       const child = spawn(py, [path.join(SERVER_DIR, script), ...args], {
         maxBuffer: 64 * 1024 * 1024,
       } as never)
@@ -79,12 +96,13 @@ function runPython(script: string, args: string[], timeoutMs: number): Promise<s
       child.stdout.on("data", (d) => { out += d })
       child.stderr.on("data", (d) => { err += d })
       child.on("error", () => {
+        attemptFailed = true
         clearTimeout(timer)
-        if (!settled) { settled = true; tryNext(idx + 1) } // ENOENT → 试下一个候选
+        if (!settled) tryNext(idx + 1) // ENOENT → 试下一个候选
       })
       child.on("close", (code) => {
         clearTimeout(timer)
-        if (settled) return
+        if (settled || attemptFailed) return
         settled = true
         if (code === 0) resolve(out)
         else reject(new Error(err.trim().slice(-800) || `Python 退出码 ${code}`))
@@ -187,14 +205,23 @@ function minglunApi(): Plugin {
             return
           }
           if (url === "/api/history" && req.method === "GET") {
+            const owner = historyOwnerHash(req)
+            if (!owner) { sendJson(res, 401, { error: "缺少历史方案访问凭证" }); return }
             const q = new URL(req.url || "", "http://localhost").searchParams
             const idRaw = (q.get("id") || "").trim()
             const nick = (q.get("nick") || "").trim()
-            const records = loadHistory()
+            const records = loadHistory().filter((r) => r.owner_hash === owner)
             if (idRaw) {
               const rec = records.find((r) => String(r.id) === idRaw)
               if (!rec) { sendJson(res, 404, { error: "记录不存在" }); return }
-              sendJson(res, 200, { record: rec })
+              const publicRecord = {
+                id: rec.id,
+                nick: rec.nick,
+                ts: rec.ts,
+                payload: rec.payload,
+                result: rec.result,
+              }
+              sendJson(res, 200, { record: publicRecord })
               return
             }
             let items = records.slice().sort((a, b) => b.ts - a.ts).map(summarize)
@@ -203,6 +230,8 @@ function minglunApi(): Plugin {
             return
           }
           if (url === "/api/history" && req.method === "POST") {
+            const owner = historyOwnerHash(req)
+            if (!owner) { sendJson(res, 401, { error: "缺少历史方案访问凭证" }); return }
             const body = JSON.parse(await readBody(req) || "{}")
             const nick = String(body.nick || "").trim().slice(0, 24)
             if (!nick) { sendJson(res, 400, { error: "缺少昵称" }); return }
@@ -212,18 +241,18 @@ function minglunApi(): Plugin {
             }
             const records = loadHistory()
             const nid = records.reduce((m, r) => Math.max(m, r.id || 0), 0) + 1
-            const rec: HistoryRec = { id: nid, nick, ts: Math.floor(Date.now() / 1000), payload: body.payload, result: body.result }
-            records.push(rec)
-            saveHistory(records.slice(-MAX_HISTORY))
+            const rec: HistoryRec = { id: nid, owner_hash: owner, nick, ts: Math.floor(Date.now() / 1000), payload: body.payload, result: body.result }
+            saveHistory(appendHistory(records, rec))
             sendJson(res, 200, { id: nid, summary: summarize(rec) })
             return
           }
           if (url === "/api/history" && req.method === "DELETE") {
+            const owner = historyOwnerHash(req)
+            if (!owner) { sendJson(res, 401, { error: "缺少历史方案访问凭证" }); return }
             const body = JSON.parse(await readBody(req) || "{}")
-            const nick = String(body.nick || "").trim()
             const records = loadHistory()
             const rec = records.find((r) => r.id === body.id)
-            if (!rec || rec.nick !== nick) { sendJson(res, 404, { error: "记录不存在或昵称不匹配" }); return }
+            if (!rec || rec.owner_hash !== owner) { sendJson(res, 404, { error: "记录不存在" }); return }
             saveHistory(records.filter((r) => r.id !== body.id))
             sendJson(res, 200, { ok: true })
             return

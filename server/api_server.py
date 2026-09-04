@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import subprocess
 import sys
@@ -32,6 +33,7 @@ LOCK = threading.Lock()
 HISTORY_FILE = Path(os.environ.get("MINGLUN_HISTORY_FILE", str(HERE / "history.json")))
 HISTORY_LOCK = threading.Lock()
 MAX_HISTORY = 100
+MAX_HISTORY_TOTAL = 5000
 
 
 def load_history() -> list[dict]:
@@ -45,6 +47,15 @@ def save_history(records: list[dict]) -> None:
     tmp = HISTORY_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
     tmp.replace(HISTORY_FILE)
+
+
+def append_history(records: list[dict], rec: dict) -> list[dict]:
+    """每个浏览器保留 100 条，同时限制共享文件的总大小。"""
+    owner = rec["owner_hash"]
+    mine = [r for r in records if r.get("owner_hash") == owner][-(MAX_HISTORY - 1):]
+    others = [r for r in records if r.get("owner_hash") != owner]
+    merged = sorted([*others, *mine, rec], key=lambda r: r.get("ts", 0))
+    return merged[-MAX_HISTORY_TOTAL:]
 
 
 def summarize(rec: dict) -> dict:
@@ -63,6 +74,13 @@ def summarize(rec: dict) -> dict:
         "main_pct": totals.get(f"{main}元素%", 0),
         "atk": totals.get("攻击", 0),
     }
+
+
+def owner_hash(token: str) -> str | None:
+    token = token.strip()
+    if not 24 <= len(token) <= 160:
+        return None
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def run_script(script: str, args: list[str], timeout: int) -> tuple[int, str, str]:
@@ -87,7 +105,6 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(status)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
         self.end_headers()
         self.wfile.write(body)
 
@@ -140,17 +157,21 @@ class Handler(BaseHTTPRequestHandler):
                     pass
             return
         if self.path.split("?")[0] == "/api/history":
+            owner = owner_hash(self.headers.get("X-Minglun-Owner") or "")
+            if not owner:
+                self._send_json(401, {"error": "缺少历史方案访问凭证"})
+                return
             q = parse_qs(urlparse(self.path).query)
             nick = (q.get("nick") or [""])[0].strip()
             id_raw = (q.get("id") or [""])[0].strip()
             with HISTORY_LOCK:
-                records = load_history()
+                records = [r for r in load_history() if r.get("owner_hash") == owner]
             if id_raw:
                 rec = next((r for r in records if str(r.get("id")) == id_raw), None)
                 if not rec:
                     self._send_json(404, {"error": "记录不存在"})
                     return
-                self._send_json(200, {"record": rec})
+                self._send_json(200, {"record": {k: v for k, v in rec.items() if k != "owner_hash"}})
                 return
             items = [summarize(r) for r in sorted(records, key=lambda r: r.get("ts", 0), reverse=True)]
             if nick:
@@ -228,6 +249,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/history":
             try:
+                owner = owner_hash(self.headers.get("X-Minglun-Owner") or "")
+                if not owner:
+                    self._send_json(401, {"error": "缺少历史方案访问凭证"})
+                    return
                 payload = json.loads(body.decode("utf-8") or "{}")
                 nick = str(payload.get("nick") or "").strip()[:24]
                 if not nick:
@@ -239,10 +264,9 @@ class Handler(BaseHTTPRequestHandler):
                 with HISTORY_LOCK:
                     records = load_history()
                     nid = max([r.get("id", 0) for r in records] or [0]) + 1
-                    rec = {"id": nid, "nick": nick, "ts": int(time.time()),
+                    rec = {"id": nid, "owner_hash": owner, "nick": nick, "ts": int(time.time()),
                            "payload": payload["payload"], "result": payload["result"]}
-                    records.append(rec)
-                    records = records[-MAX_HISTORY:]
+                    records = append_history(records, rec)
                     save_history(records)
                 self._send_json(200, {"id": nid, "summary": summarize(rec)})
             except Exception as exc:
@@ -255,15 +279,18 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0]
         if path == "/api/history":
             try:
+                owner = owner_hash(self.headers.get("X-Minglun-Owner") or "")
+                if not owner:
+                    self._send_json(401, {"error": "缺少历史方案访问凭证"})
+                    return
                 length = min(int(self.headers.get("Content-Length") or 0), 1024 * 1024)
                 payload = json.loads(self.rfile.read(length).decode("utf-8") or "{}")
                 rid = payload.get("id")
-                nick = str(payload.get("nick") or "").strip()
                 with HISTORY_LOCK:
                     records = load_history()
                     rec = next((r for r in records if r.get("id") == rid), None)
-                    if not rec or rec.get("nick") != nick:
-                        self._send_json(404, {"error": "记录不存在或昵称不匹配"})
+                    if not rec or rec.get("owner_hash") != owner:
+                        self._send_json(404, {"error": "记录不存在"})
                         return
                     records = [r for r in records if r.get("id") != rid]
                     save_history(records)

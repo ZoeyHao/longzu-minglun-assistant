@@ -65,6 +65,7 @@ def main() -> None:
         if not members:
             continue
         stars = int(r["stars"])
+        advance_effects = list(r.get("advance_effects") or []) if r["element"] == "精神" else []
         combos.append({
             "element": r["element"],
             "wheel": r["wheel"],
@@ -72,7 +73,7 @@ def main() -> None:
             "stars": stars,
             "members": [{"name": m, "pool": member_pool(m), "advance_cost": advance_cost(m)} for m in members],
             "effects": list(r.get("effects") or []),
-            "advance_effects": list(r.get("advance_effects") or []),
+            "advance_effects": advance_effects,
             "wheel_per_member_round": stars,
             "wheel_round_total": stars * len(members),
             "wheel_full_total": stars * ADV_TO_FINAL * len(members),

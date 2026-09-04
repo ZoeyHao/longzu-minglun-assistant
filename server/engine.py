@@ -38,7 +38,38 @@ ADV_TO_FINAL = len(TIERS) - 1  # 5 次进阶到彩0
 INF = 10 ** 9
 LIMITED_COST = {"绘梨衣": 15}
 DEFAULT_LIMITED_COST = 30
-DEFAULT_CHAIN = ["{main}元素", "{main}元素%", "消耗", "攻击", "攻击%", "命轮值"]
+ATTRIBUTE_ALIASES = {
+    # 工作簿中「王之权座」的进阶属性写成了“精神 +0.25%”。
+    # 统一到网站使用的目标名，避免收益被漏算为另一个属性。
+    "精神": "精神元素",
+    "精神%": "精神元素%",
+}
+
+
+def default_chain(main_element: str) -> list[str]:
+    """百分比属性只存在于工作簿的精神页进阶效果中。"""
+    chain = [f"{main_element}元素"]
+    if main_element == "精神":
+        chain.append("精神元素%")
+    chain.extend(["消耗", "攻击"])
+    if main_element == "精神":
+        chain.append("攻击%")
+    chain.append("命轮值")
+    return chain
+
+
+def normalized_attributes(effects, *, assume_percent: bool = False) -> dict[str, float]:
+    """解析并规范化属性名；重复属性相加而不是静默覆盖。"""
+    result: dict[str, float] = {}
+    for name, value in parse_attributes(tuple(effects or ()), assume_percent=assume_percent):
+        canonical = ATTRIBUTE_ALIASES.get(name, name)
+        result[canonical] = result.get(canonical, 0.0) + value
+    return result
+
+
+def advance_effects_for_row(row: dict) -> list[str]:
+    """权威表只有精神元素页提供逐次进阶效果。"""
+    return list(row.get("advance_effects") or []) if row.get("element") == "精神" else []
 
 
 def compute_demands(combos: list[dict], common_ssr: set[str]) -> tuple[dict, dict]:
@@ -78,7 +109,7 @@ def main() -> None:
     else:
         elements = {str(e).replace("元素", "") for e in elements_req}
     main_element = str(payload.get("main_element") or "精神").replace("元素", "")
-    chain = payload.get("objective") or [t.format(main=main_element) for t in DEFAULT_CHAIN]
+    chain = payload.get("objective") or default_chain(main_element)
 
     inventory = {QM.canonical_name(k): int(v) for k, v in (payload.get("inventory") or {}).items() if int(v) > 0}
     wheel_inf_rarities = set(payload.get("wheel_infinite_rarities") or ["SR", "R"])
@@ -152,13 +183,15 @@ def main() -> None:
             limited, budget = advance_budget(m)
             if limited:
                 scarce[m] = budget
+        # 只有精神元素页 K:M 是进阶效果；其他元素页这些列是辅助统计，不能当属性。
+        advance_effects = advance_effects_for_row(r)
         combos.append({
             "element": r["element"], "wheel": r["wheel"], "name": r["name"],
             "stars": int(r["stars"]), "members": members,
-            "attrs": dict(parse_attributes(tuple(r.get("effects") or ()))),
-            "adv_attrs": dict(parse_attributes(tuple(r.get("advance_effects") or ()), assume_percent=True)),
+            "attrs": normalized_attributes(r.get("effects") or ()),
+            "adv_attrs": normalized_attributes(advance_effects, assume_percent=True),
             "effects": list(r.get("effects") or []),
-            "advance_effects": list(r.get("advance_effects") or []),
+            "advance_effects": advance_effects,
             "scarce": scarce, "source": r.get("source", ""),
             "missing_fields": list(r.get("missing_fields") or []),
         })
