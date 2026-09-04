@@ -2,12 +2,24 @@ import { useEffect, useMemo, useState } from 'react'
 import type { GameData, PlanResult } from '@/types'
 import { fetchGameData, runPlan, saveHistory, type HistoryRecord, type PlanPayload } from '@/lib/api'
 import InventorySection, { type InventoryState } from '@/sections/InventorySection'
-import ParamsSection, { buildChain, type ParamsState } from '@/sections/ParamsSection'
+import ParamsSection, { type ParamsState } from '@/sections/ParamsSection'
+import { buildChain } from '@/lib/objective'
 import ResultSection from '@/sections/ResultSection'
 import HistoryDialog from '@/sections/HistoryPanel'
 import DataDetailDialog from '@/sections/DataDetailDialog'
 
 const NICK_KEY = 'minglun-nick'
+const HISTORY_OWNER_KEY = 'minglun-history-owner'
+
+function getHistoryOwnerToken(): string {
+  const existing = localStorage.getItem(HISTORY_OWNER_KEY)
+  if (existing) return existing
+  const token = typeof crypto.randomUUID === 'function'
+    ? `${crypto.randomUUID()}${crypto.randomUUID()}`
+    : Array.from(crypto.getRandomValues(new Uint8Array(32)), (n) => n.toString(16).padStart(2, '0')).join('')
+  localStorage.setItem(HISTORY_OWNER_KEY, token)
+  return token
+}
 
 export default function Home() {
   const [data, setData] = useState<GameData | null>(null)
@@ -27,7 +39,10 @@ export default function Home() {
     customChain: '',
   })
   const [result, setResult] = useState<PlanResult | null>(null)
+  const [lastPayload, setLastPayload] = useState<PlanPayload | null>(null)
+  const [historyOwnerToken] = useState(getHistoryOwnerToken)
   const [running, setRunning] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [runError, setRunError] = useState('')
   const [saveNote, setSaveNote] = useState('')
   const [showHistory, setShowHistory] = useState(false)
@@ -45,11 +60,6 @@ export default function Home() {
 
   const run = async () => {
     if (!data) return
-    const nick = params.nick.trim()
-    if (!nick) {
-      setRunError('请先填写昵称（用于保存历史方案）')
-      return
-    }
     setRunning(true)
     setRunError('')
     setSaveNote('')
@@ -86,12 +96,7 @@ export default function Home() {
       }
       const r = await runPlan(payload)
       setResult(r)
-      try {
-        await saveHistory(nick, payload, r)
-        setSaveNote(`已按昵称「${nick}」存入历史记录`)
-      } catch (e) {
-        setSaveNote(`方案已生成，但历史存档失败：${e instanceof Error ? e.message : String(e)}`)
-      }
+      setLastPayload(payload)
       setTimeout(() => document.getElementById('result-anchor')?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch (e) {
       setRunError(e instanceof Error ? e.message : String(e))
@@ -100,8 +105,24 @@ export default function Home() {
     }
   }
 
+  const saveCurrent = async () => {
+    if (!result || !lastPayload) return
+    setSaving(true)
+    setSaveNote('')
+    const nick = params.nick.trim() || '未命名方案'
+    try {
+      await saveHistory(historyOwnerToken, nick, lastPayload, result)
+      setSaveNote(`已将「${nick}」保存到当前浏览器的私有历史`)
+    } catch (e) {
+      setSaveNote(`历史保存失败：${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const viewRecord = (rec: HistoryRecord) => {
     setResult(rec.result)
+    setLastPayload(rec.payload)
     setSaveNote(`正在查看 ${rec.nick} 的历史方案（未改动当前库存）`)
     setTimeout(() => document.getElementById('result-anchor')?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
@@ -134,6 +155,7 @@ export default function Home() {
       customChain: chain.join(','),
     })
     setResult(null)
+    setLastPayload(null)
     setRunError('')
     setSaveNote(`已载入 ${rec.nick} 的库存与目标，核对后可直接重新生成`)
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -142,32 +164,33 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0b0f1a] text-slate-100 [background-image:radial-gradient(70rem_32rem_at_50%_-8%,rgba(245,158,11,0.07),transparent)]">
       <div className="mx-auto max-w-3xl px-3 pb-16 pt-6 sm:px-6 lg:max-w-6xl">
-        <header className="mb-5">
-          <h1 className="bg-gradient-to-r from-amber-300 via-amber-400 to-orange-400 bg-clip-text text-2xl font-black text-transparent">
+        <header className="relative mb-5 overflow-hidden rounded-3xl border border-amber-500/15 bg-slate-900/60 px-4 py-5 shadow-2xl sm:px-6 sm:py-6">
+          <div className="pointer-events-none absolute -right-14 -top-20 h-52 w-52 rounded-full border border-amber-400/10 shadow-[0_0_80px_rgba(245,158,11,0.12)]" />
+          <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-400/70">Destiny Wheel Planner</p>
+          <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-orange-400 bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-3xl">
             龙族：卡塞尔之门 · 命轮助手
           </h1>
-          <p className="mt-1 text-xs leading-5 text-slate-400">
-            录入命轮碎片 / 自选碎片 / 限定角色碎片，一键生成 MILP 认证最优命轮方案。支持文本与截图自动填充。
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+            录入命轮与角色碎片，按主元素和库存目标生成可执行的最优方案。支持文本、截图和手动微调。
           </p>
-          {data && (
-            <button
-              type="button"
-              onClick={() => setShowDataInfo(true)}
-              className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-slate-700/70 bg-slate-900/60 px-2.5 py-1 text-[11px] text-slate-500 transition-colors hover:border-amber-400/40 hover:text-slate-300"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3 w-3">
-                <ellipse cx="12" cy="5" rx="9" ry="3" />
-                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
-              </svg>
-              数据明细 · {Object.values(data.combo_counts).reduce((a, b) => a + b, 0)} 组合
-            </button>
-          )}
-          <p className="mt-2 text-[11px] leading-5 text-slate-500">
-            数据支持：君度
-            <br />
-            技术支持：Roy、梧桐落
-          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
+            {data && (
+              <button
+                type="button"
+                onClick={() => setShowDataInfo(true)}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full border border-amber-400/25 bg-amber-500/10 px-3 text-amber-200 transition-colors hover:border-amber-400/50 hover:bg-amber-500/15"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="h-3.5 w-3.5">
+                  <ellipse cx="12" cy="5" rx="9" ry="3" />
+                  <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                  <path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3" />
+                </svg>
+                {data.combo_total} 个组合 · 查看数据
+              </button>
+            )}
+            <span className="rounded-full border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-400">数据：君度</span>
+            <span className="rounded-full border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-400">技术：Roy、梧桐落</span>
+          </div>
         </header>
 
         {loadError && (
@@ -189,16 +212,17 @@ export default function Home() {
                     onClick={() => setShowHistory(!showHistory)}
                     title="历史方案"
                     aria-label="历史方案"
-                    className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
+                    className={`flex h-9 items-center justify-center gap-1 rounded-lg border px-2 transition-colors ${
                       showHistory
                         ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
                         : 'border-slate-600 bg-slate-800/60 text-slate-400 hover:border-slate-500 hover:text-slate-300'
                     }`}
-                  >
+                    >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12 6 12 12 16 14" />
                     </svg>
+                    <span className="hidden text-xs sm:inline">历史</span>
                   </button>
                 }
               />
@@ -215,7 +239,7 @@ export default function Home() {
                 <p className="text-center text-xs text-slate-600">提示：点「① 库存」旁的上传图标，可一键填入示例体验完整流程</p>
               )}
               <div id="result-anchor" />
-              {result && <ResultSection result={result} />}
+              {result && <ResultSection result={result} onSave={saveCurrent} saving={saving} />}
             </div>
           </div>
         )}
@@ -224,6 +248,7 @@ export default function Home() {
           <HistoryDialog
             open={showHistory}
             onOpenChange={setShowHistory}
+            ownerToken={historyOwnerToken}
             currentNick={params.nick.trim()}
             onView={viewRecord}
             onLoad={loadRecord}
@@ -234,7 +259,7 @@ export default function Home() {
           <DataDetailDialog open={showDataInfo} onOpenChange={setShowDataInfo} />
         )}
 
-        <footer className="mt-8 text-center text-[11px] leading-5 text-slate-600">
+        <footer className="mt-8 text-center text-xs leading-5 text-slate-500">
           数据口径见「计算口径与假设」· 所有组合默认从白0星开始 · 品阶 白→绿→蓝→紫→橙→彩
         </footer>
       </div>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { CombosData } from '@/types'
 import { combosExcelUrl, fetchCombos } from '@/lib/api'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const POOL_COLOR: Record<string, string> = {
   UR: 'text-amber-300',
@@ -39,6 +39,7 @@ export default function DataDetailDialog(props: { open: boolean; onOpenChange: (
         <DialogHeader className="border-b border-slate-700/60 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-2 pr-6">
             <DialogTitle className="text-sm font-bold text-amber-300">数据明细</DialogTitle>
+            <DialogDescription className="sr-only">查看、搜索并导出命轮组合的权威数据明细。</DialogDescription>
             <a
               href={combosExcelUrl}
               download="命轮组合明细.xlsx"
@@ -91,7 +92,48 @@ export default function DataDetailDialog(props: { open: boolean; onOpenChange: (
                 />
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-700/60">
+              <div className="space-y-2 md:hidden">
+                {filtered.map((c) => (
+                  <article key={`${c.element}${c.wheel}${c.name}`} className="rounded-xl border border-slate-700/70 bg-slate-950/50 p-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-100">{c.name}</h3>
+                        <p className="mt-0.5 text-xs text-slate-500">{c.element} · {c.wheel}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-amber-500/15 px-2 py-1 text-xs font-semibold text-amber-300">{c.stars} 星</span>
+                    </div>
+                    <div className="mt-2 flex flex-wrap gap-x-2 gap-y-1 text-xs">
+                      {c.members.map((m) => (
+                        <span key={m.name} className={POOL_COLOR[m.pool] ?? 'text-slate-300'}>
+                          {m.name}<span className="ml-0.5 text-[10px] text-slate-600">{m.pool.replace('SSR', '')}</span>
+                        </span>
+                      ))}
+                    </div>
+                    <dl className="mt-3 space-y-2 text-xs leading-5">
+                      <div>
+                        <dt className="text-slate-500">每星基础效果</dt>
+                        <dd className="text-slate-300">{c.effects.length ? c.effects.join('；') : '—'}</dd>
+                      </div>
+                      {c.advance_effects.length > 0 && (
+                        <div>
+                          <dt className="text-slate-500">每次进阶效果</dt>
+                          <dd className="text-slate-300">{c.advance_effects.join('；')}</dd>
+                        </div>
+                      )}
+                    </dl>
+                    <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-slate-400">
+                      <span className="rounded-md bg-slate-800 px-2 py-1">单轮 {c.wheel_round_total} 命轮</span>
+                      <span className="rounded-md bg-slate-800 px-2 py-1">五轮 {c.wheel_full_total} 命轮</span>
+                      {c.members.filter((m) => m.advance_cost).map((m) => (
+                        <span key={m.name} className="rounded-md bg-orange-500/10 px-2 py-1 text-orange-300">{m.name} {m.advance_cost}/次</span>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+                {filtered.length === 0 && <div className="py-8 text-center text-xs text-slate-500">没有匹配的组合</div>}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-xl border border-slate-700/60 md:block">
                 <table className="w-full min-w-[860px] border-collapse text-left text-[11px]">
                   <thead className="sticky top-0 bg-slate-800 text-slate-300">
                     <tr>

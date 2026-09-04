@@ -58,6 +58,8 @@ def main() -> None:
     for sheet in QM.ELEMENT_SHEETS:
         rows = QM.parse_combo_rows(wb[sheet])
         counts[sheet.removesuffix("元素")] = len(rows)
+    supplemental = json.loads((refs / "supplemental-combos.json").read_text(encoding="utf-8"))
+    combo_total = sum(counts.values()) + len(supplemental.get("combos") or [])
 
     print(json.dumps({
         "workbook_sha256": hashlib.sha256(wb_path.read_bytes()).hexdigest()[:12],
@@ -66,6 +68,7 @@ def main() -> None:
         "elements": ["精神", "火", "风", "水", "土"],
         "wheels": ["创始", "物质", "执行"],
         "combo_counts": counts,
+        "combo_total": combo_total,
         "recognizable_count": len(characters),
         "recognizable_note": RECOGNIZABLE,
     }, ensure_ascii=False))

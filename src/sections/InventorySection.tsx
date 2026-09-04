@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { CharInfo, GameData, ParseReport, RecognizeFileResult } from '@/types'
 import { parseInventoryText } from '@/lib/parseText'
 import { recognizeImages } from '@/lib/api'
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export interface InventoryState {
   wheel: Record<string, string>
@@ -31,31 +32,33 @@ function poolOf(c: CharInfo): string {
   return c.rarity
 }
 
-function NumInput(props: { value: string; onChange: (v: string) => void; disabled?: boolean }) {
+function NumInput(props: { value: string; onChange: (v: string) => void; disabled?: boolean; ariaLabel: string }) {
   if (props.disabled) {
-    return <span className="flex h-8 w-14 items-center justify-center rounded-lg bg-emerald-500/15 text-xs font-semibold text-emerald-300">无限</span>
+    return <span aria-label={props.ariaLabel} className="flex h-10 w-16 items-center justify-center rounded-lg bg-emerald-500/15 text-xs font-semibold text-emerald-300">无限</span>
   }
   return (
     <input
       type="number" inputMode="numeric" min={0} placeholder="0" autoComplete="off"
+      aria-label={props.ariaLabel}
       value={props.value}
       onChange={(e) => props.onChange(e.target.value)}
-      className="h-8 w-14 rounded-lg border border-slate-600 bg-slate-900/80 px-1.5 text-right text-sm text-slate-100 outline-none focus:border-amber-400"
+      className="h-10 w-16 rounded-lg border border-slate-600 bg-slate-900/80 px-2 text-right text-sm text-slate-100 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
     />
   )
 }
 
 /** 角色碎片格：数值输入 + ∞ 无限开关 */
-function RoleFragCell(props: { infinite: boolean; value: string; onToggle: (next: boolean) => void; onChange: (v: string) => void }) {
+function RoleFragCell(props: { name: string; infinite: boolean; value: string; onToggle: (next: boolean) => void; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center gap-1">
-      <NumInput value={props.value} onChange={props.onChange} disabled={props.infinite} />
+      <NumInput ariaLabel={`${props.name}角色碎片`} value={props.value} onChange={props.onChange} disabled={props.infinite} />
       <button
         type="button"
         onClick={() => props.onToggle(!props.infinite)}
         title={props.infinite ? '当前：无限（点击改为实报数量）' : '当前：按所填数量（点击设为无限）'}
+        aria-label={`${props.name}角色碎片：${props.infinite ? '无限，点击改为填写数量' : '按填写数量，点击设为无限'}`}
         aria-pressed={props.infinite}
-        className={`flex h-8 w-6 shrink-0 items-center justify-center rounded-lg border text-xs font-bold transition-colors ${
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-sm font-bold transition-colors ${
           props.infinite
             ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-300'
             : 'border-slate-600 bg-slate-800/60 text-slate-500 hover:border-slate-500 hover:text-slate-300'
@@ -74,12 +77,15 @@ export default function InventorySection(props: {
   headerExtra?: ReactNode
 }) {
   const { data, value, onChange, headerExtra } = props
+  const isMobile = useIsMobile()
   const [text, setText] = useState('')
   const [report, setReport] = useState<ParseReport | null>(null)
   const [shots, setShots] = useState<RecognizeFileResult[] | null>(null)
   const [recognizing, setRecognizing] = useState(false)
   const [shotError, setShotError] = useState('')
   const [showImport, setShowImport] = useState(false)
+  const [query, setQuery] = useState('')
+  const [openGroups, setOpenGroups] = useState<string[]>(() => isMobile ? [] : ['限定SSR', '常驻SSR'])
   const fileRef = useRef<HTMLInputElement>(null)
 
   const groups = useMemo(() => {
@@ -89,6 +95,29 @@ export default function InventorySection(props: {
     }
     return g
   }, [data])
+
+  const visibleGroups = useMemo(() => {
+    const keyword = query.trim().toLocaleLowerCase('zh-CN')
+    if (!keyword) return groups
+    const aliasMatches = new Set(
+      Object.entries(data.aliases)
+        .filter(([alias]) => alias.toLocaleLowerCase('zh-CN').includes(keyword))
+        .map(([, canonical]) => canonical),
+    )
+    return Object.fromEntries(
+      Object.entries(groups).map(([key, chars]) => [
+        key,
+        chars.filter((c) => c.name.toLocaleLowerCase('zh-CN').includes(keyword)
+          || c.aliases.some((alias) => alias.toLocaleLowerCase('zh-CN').includes(keyword))
+          || aliasMatches.has(c.name)),
+      ]),
+    )
+  }, [data.aliases, groups, query])
+
+  useEffect(() => {
+    if (!query.trim()) return
+    setOpenGroups(POOL_GROUPS.filter((g) => (visibleGroups[g.key] ?? []).length > 0).map((g) => g.key))
+  }, [query, visibleGroups])
 
   const wheelFilled = Object.values(value.wheel).filter((v) => v !== '').length
   const roleFilled = Object.values(value.role).filter((v) => v !== '').length
@@ -174,7 +203,7 @@ export default function InventorySection(props: {
             onClick={() => setShowImport(!showImport)}
             title="导入（文本 / 截图）"
             aria-label="导入（文本 / 截图）"
-            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition-colors ${
+            className={`flex h-9 items-center justify-center gap-1 rounded-lg border px-2 transition-colors ${
               showImport
                 ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
                 : 'border-slate-600 bg-slate-800/60 text-slate-400 hover:border-slate-500 hover:text-slate-300'
@@ -185,6 +214,7 @@ export default function InventorySection(props: {
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
+            <span className="hidden text-xs sm:inline">导入</span>
           </button>
           {headerExtra}
         </h2>
@@ -278,20 +308,33 @@ export default function InventorySection(props: {
 
       {/* 统一库存表：每行 = 角色 + 命轮碎片 + 角色碎片（含∞开关） */}
       <div className="mt-3">
+        <label className="mb-3 block">
+          <span className="sr-only">搜索角色</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="搜索角色或别名"
+            className="h-11 w-full rounded-xl border border-slate-700 bg-slate-950/70 px-3 text-sm text-slate-100 outline-none placeholder:text-slate-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+          />
+        </label>
         <div className="mb-1 grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 px-2 text-[11px] text-slate-500">
-          <span className="w-9" />
+          <span className="w-10" />
           <span>角色</span>
-          <span className="w-14 text-center">命轮</span>
-          <span className="w-[5.25rem] text-center">角色碎片 ∞</span>
+          <span className="w-16 text-center">命轮</span>
+          <span className="w-[6.75rem] text-center">角色碎片 / ∞</span>
         </div>
-        <Accordion type="multiple" defaultValue={['限定SSR', '常驻SSR']}>
+        <Accordion type="multiple" value={openGroups} onValueChange={setOpenGroups}>
           {POOL_GROUPS.map((g) => {
             const isUR = g.key === 'UR'
+            const visible = visibleGroups[g.key] ?? []
+            if (query.trim() && visible.length === 0) return null
             return (
               <AccordionItem key={g.key} value={g.key} className="border-slate-700/60">
                 <AccordionTrigger className={`py-2 text-sm ${isUR ? 'text-slate-500' : 'text-slate-200'}`}>
                   {g.title}
-                  <span className="ml-2 text-[11px] font-normal text-slate-500">{g.hint}</span>
+                  <span className="ml-1 text-xs font-normal text-slate-500">{visible.length}</span>
+                  <span className="ml-2 hidden text-[11px] font-normal text-slate-500 sm:inline">{g.hint}</span>
                   {isUR && <span className="ml-2 rounded bg-slate-700/60 px-1.5 py-0.5 text-[10px] text-slate-400">暂不支持</span>}
                 </AccordionTrigger>
                 <AccordionContent>
@@ -301,19 +344,20 @@ export default function InventorySection(props: {
                     </p>
                   )}
                   <div className={`space-y-1.5 ${isUR ? 'pointer-events-none opacity-40' : ''}`}>
-                    {(groups[g.key] ?? []).map((c) => {
+                    {visible.map((c) => {
                       const hasRoleToggle = c.rarity === 'UR' || c.rarity === 'SSR'
                       const wheelInf = (c.rarity === 'SR' || c.rarity === 'R') && value.srRInfinite
                       return (
                         <div key={c.name} className="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 rounded-xl border border-slate-700/60 bg-slate-800/50 px-2 py-1.5">
-                          <img src={`${import.meta.env.BASE_URL}${c.icon}`} alt={c.name} className="h-9 w-9 rounded-lg bg-slate-700 object-cover" loading="lazy" />
+                          <img src={`${import.meta.env.BASE_URL}${c.icon}`} alt={c.name} className="h-10 w-10 rounded-lg bg-slate-700 object-cover" loading="lazy" />
                           <div className="min-w-0">
                             <div className="truncate text-[13px] font-medium text-slate-100">{c.name}</div>
                             {hasRoleToggle && !isUR && <div className="text-[10px] text-amber-300/80">{c.name === '绘梨衣' ? '15/次进阶' : '30/次进阶'}</div>}
                           </div>
-                          <NumInput value={value.wheel[c.name] ?? ''} onChange={(v) => setWheel(c.name, v)} disabled={wheelInf} />
+                          <NumInput ariaLabel={`${c.name}命轮碎片`} value={value.wheel[c.name] ?? ''} onChange={(v) => setWheel(c.name, v)} disabled={wheelInf} />
                           {hasRoleToggle ? (
                             <RoleFragCell
+                              name={c.name}
                               infinite={isRoleInfinite(c)}
                               value={value.role[c.name] ?? ''}
                               onToggle={(next) => setRoleInfinite(c.name, next)}
@@ -321,8 +365,8 @@ export default function InventorySection(props: {
                             />
                           ) : (
                             <div className="flex items-center gap-1">
-                              <NumInput value="" onChange={() => {}} disabled />
-                              <span className="w-6" />
+                              <NumInput ariaLabel={`${c.name}角色碎片`} value="" onChange={() => {}} disabled />
+                              <span className="w-10" />
                             </div>
                           )}
                         </div>

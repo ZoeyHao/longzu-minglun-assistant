@@ -16,7 +16,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from engine import ADV_TO_FINAL, compute_demands  # noqa: E402
+from engine import ADV_TO_FINAL, advance_effects_for_row, compute_demands, default_chain, normalized_attributes  # noqa: E402
 
 COMMON = {"常驻A", "常驻B"}
 
@@ -77,6 +77,25 @@ class TestComputeDemands(unittest.TestCase):
         ]
         d, _ = compute_demands(combos, COMMON)
         self.assertEqual(d["常驻A"], 3 * ADV_TO_FINAL + 3 * 1 + 4 * 3)
+
+
+class TestEffectNormalization(unittest.TestCase):
+    def test_spirit_percent_alias_is_normalized(self):
+        attrs = normalized_attributes(["精神\n+0.25%"], assume_percent=True)
+        self.assertEqual(attrs, {"精神元素%": 0.25})
+
+    def test_only_spirit_rows_have_advance_effects(self):
+        self.assertEqual(
+            advance_effects_for_row({"element": "精神", "advance_effects": ["精神元素+1%"]}),
+            ["精神元素+1%"],
+        )
+        self.assertEqual(
+            advance_effects_for_row({"element": "土", "advance_effects": ["路明非", "3"]}),
+            [],
+        )
+
+    def test_non_spirit_default_chain_skips_unavailable_percent_goals(self):
+        self.assertEqual(["火元素", "消耗", "攻击", "命轮值"], default_chain("火"))
 
 
 if __name__ == "__main__":

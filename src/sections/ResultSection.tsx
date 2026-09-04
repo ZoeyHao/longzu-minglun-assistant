@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { PlanResult, PlanRow } from '@/types'
+import { Button } from '@/components/ui/button'
 
 const ELEMENT_COLOR: Record<string, string> = {
   精神: 'text-violet-300 border-violet-500/40 bg-violet-500/10',
@@ -50,7 +51,15 @@ function PlanCard({ row, main }: { row: PlanRow; main: string }) {
   )
 }
 
-export default function ResultSection({ result }: { result: PlanResult }) {
+export default function ResultSection({
+  result,
+  onSave,
+  saving,
+}: {
+  result: PlanResult
+  onSave: () => void
+  saving: boolean
+}) {
   const [showDark, setShowDark] = useState(false)
   const grouped = useMemo(() => {
     const g: Record<string, Record<string, PlanRow[]>> = {}
@@ -72,6 +81,16 @@ export default function ResultSection({ result }: { result: PlanResult }) {
           {result.status === 'optimal' ? 'MILP 认证最优' : result.status}
         </span>
         <span className="text-xs text-slate-500">目标链：{result.objective_chain.join(' → ')}</span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={onSave}
+          disabled={saving}
+          className="ml-auto h-9 border-amber-500/40 bg-amber-500/10 text-xs text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
+        >
+          {saving ? '保存中…' : '保存方案'}
+        </Button>
       </div>
 
       {/* 总览卡片 */}

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { HistorySummary } from '@/types'
 import { fetchHistory, fetchHistoryRecord, type HistoryRecord } from '@/lib/api'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 function fmtTime(ts: number): string {
   const d = new Date(ts * 1000)
@@ -13,11 +13,12 @@ function fmtTime(ts: number): string {
 export default function HistoryDialog(props: {
   open: boolean
   onOpenChange: (open: boolean) => void
+  ownerToken: string
   currentNick: string
   onView: (rec: HistoryRecord) => void
   onLoad: (rec: HistoryRecord) => void
 }) {
-  const { open, onOpenChange, currentNick, onView, onLoad } = props
+  const { open, onOpenChange, ownerToken, currentNick, onView, onLoad } = props
   const [records, setRecords] = useState<HistorySummary[] | null>(null)
   const [error, setError] = useState('')
   const [onlyMine, setOnlyMine] = useState(!!currentNick)
@@ -26,11 +27,11 @@ export default function HistoryDialog(props: {
   const refresh = useCallback(async () => {
     setError('')
     try {
-      setRecords(await fetchHistory(onlyMine && currentNick ? currentNick : undefined))
+      setRecords(await fetchHistory(ownerToken, onlyMine && currentNick ? currentNick : undefined))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     }
-  }, [onlyMine, currentNick])
+  }, [onlyMine, currentNick, ownerToken])
 
   useEffect(() => {
     if (open) refresh()
@@ -40,7 +41,7 @@ export default function HistoryDialog(props: {
     setBusyId(id)
     setError('')
     try {
-      cb(await fetchHistoryRecord(id))
+      cb(await fetchHistoryRecord(id, ownerToken))
       onOpenChange(false)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -55,6 +56,7 @@ export default function HistoryDialog(props: {
         <DialogHeader className="border-b border-slate-700/60 px-4 py-3">
           <div className="flex items-center justify-between gap-2 pr-6">
             <DialogTitle className="text-sm font-bold text-amber-300">历史方案（保留最近 100 条）</DialogTitle>
+            <DialogDescription className="sr-only">仅显示由当前浏览器保存的命轮方案。</DialogDescription>
             <label className="flex items-center gap-1.5 text-[11px] font-normal text-slate-400">
               <input
                 type="checkbox"
@@ -70,7 +72,7 @@ export default function HistoryDialog(props: {
           {error && <div className="mb-2 text-xs text-rose-300">{error}</div>}
           {!records && !error && <div className="py-6 text-center text-xs text-slate-500">加载中…</div>}
           {records && records.length === 0 && (
-            <div className="py-6 text-center text-xs text-slate-500">暂无记录。填好昵称并生成方案后会自动存档。</div>
+            <div className="py-6 text-center text-xs text-slate-500">暂无记录。生成方案后可手动保存到当前浏览器的私有历史。</div>
           )}
           {records && records.length > 0 && (
             <div className="space-y-1.5">
