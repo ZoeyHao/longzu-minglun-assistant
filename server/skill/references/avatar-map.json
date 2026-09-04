@@ -1,0 +1,93 @@
+{
+  "schema_version": 2,
+  "verified_date": "2026-09-03",
+  "scope": "User-confirmed inventory portraits: 3 UR, 39 SSR, 9 SR and 7 R.",
+  "sources": [
+    {
+      "page": 1,
+      "file": "IMG_6053.PNG",
+      "sha256": "e32c7f7e76347c787b4ea3d591a710227c1c14f75c072d11df7e3c82b63e809c",
+      "dimensions": [2796, 1290]
+    },
+    {
+      "page": 2,
+      "file": "IMG_6054.PNG",
+      "sha256": "ef13e1c710c62f724ca3ec6b59c2c3f2b8fc3d6e98bcadc598fc2050a39ff1cd",
+      "dimensions": [2796, 1290]
+    },
+    {
+      "page": 3,
+      "file": "IMG_6055.PNG",
+      "sha256": "056e60d8f858d72fc3f3aa659d53398a3ec55f7ef97b0c807e24d9f555c76618",
+      "dimensions": [2796, 1290]
+    }
+  ],
+  "role_fragments": {
+    "绘梨衣": 60
+  },
+  "portraits": [
+    {"page": 1, "row": 1, "column": 1, "rarity": "UR", "canonical_name": "月读命绘梨衣", "aliases": ["月读绘梨衣"], "snapshot_count": 2, "icon_asset": "assets/avatar-icons/ur/p1-r1-c1.png", "verified_by": "user"},
+    {"page": 1, "row": 1, "column": 2, "rarity": "UR", "canonical_name": "路明非&路鸣泽", "aliases": ["路明非&路明泽", "路明非和路鸣泽"], "snapshot_count": 1, "icon_asset": "assets/avatar-icons/ur/p1-r1-c2.png", "verified_by": "user"},
+    {"page": 1, "row": 1, "column": 3, "rarity": "UR", "canonical_name": "须佐之男命源稚女", "aliases": ["须佐源稚女"], "snapshot_count": 1, "icon_asset": "assets/avatar-icons/ur/p1-r1-c3.png", "verified_by": "user"},
+
+    {"page": 1, "row": 1, "column": 4, "rarity": "SSR", "canonical_name": "凯撒", "aliases": ["恺撒"], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p1-r1-c4.png", "verified_by": "user"},
+    {"page": 1, "row": 1, "column": 5, "rarity": "SSR", "canonical_name": "陈墨瞳", "aliases": [], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p1-r1-c5.png", "verified_by": "user"},
+    {"page": 1, "row": 2, "column": 1, "rarity": "SSR", "canonical_name": "路明非", "aliases": [], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p1-r2-c1.png", "verified_by": "user"},
+    {"page": 1, "row": 2, "column": 2, "rarity": "SSR", "canonical_name": "苏恩曦", "aliases": ["苏恩熙"], "snapshot_count": 10, "icon_asset": "assets/avatar-icons/ssr/p1-r2-c2.png", "verified_by": "user"},
+    {"page": 1, "row": 2, "column": 3, "rarity": "SSR", "canonical_name": "酒德麻衣", "aliases": ["普通酒德麻衣", "酒德麻衣（普通）"], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p1-r2-c3.png", "verified_by": "user"},
+    {"page": 1, "row": 2, "column": 4, "rarity": "SSR", "canonical_name": "芬格尔", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p1-r2-c4.png", "verified_by": "user"},
+    {"page": 1, "row": 2, "column": 5, "rarity": "SSR", "canonical_name": "诺玛", "aliases": [], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p1-r2-c5.png", "verified_by": "user"},
+    {"page": 1, "row": 3, "column": 1, "rarity": "SSR", "canonical_name": "路明泽", "aliases": ["路鸣泽"], "snapshot_count": 19, "icon_asset": "assets/avatar-icons/ssr/p1-r3-c1.png", "verified_by": "user"},
+    {"page": 1, "row": 3, "column": 2, "rarity": "SSR", "canonical_name": "昂热", "aliases": [], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p1-r3-c2.png", "verified_by": "user"},
+    {"page": 1, "row": 3, "column": 3, "rarity": "SSR", "canonical_name": "夏弥", "aliases": ["虾米"], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p1-r3-c3.png", "verified_by": "user"},
+    {"page": 1, "row": 3, "column": 4, "rarity": "SSR", "canonical_name": "王将", "aliases": [], "snapshot_count": 7, "icon_asset": "assets/avatar-icons/ssr/p1-r3-c4.png", "verified_by": "user"},
+    {"page": 1, "row": 3, "column": 5, "rarity": "SSR", "canonical_name": "帕西", "aliases": [], "snapshot_count": 10, "icon_asset": "assets/avatar-icons/ssr/p1-r3-c5.png", "verified_by": "user"},
+    {"page": 1, "row": 4, "column": 1, "rarity": "SSR", "canonical_name": "楚子航", "aliases": [], "snapshot_count": 7, "icon_asset": "assets/avatar-icons/ssr/p1-r4-c1.png", "verified_by": "user"},
+    {"page": 1, "row": 4, "column": 2, "rarity": "SSR", "canonical_name": "零", "aliases": [], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p1-r4-c2.png", "verified_by": "user"},
+    {"page": 1, "row": 4, "column": 3, "rarity": "SSR", "canonical_name": "绘梨衣", "aliases": ["上杉绘梨衣"], "snapshot_count": 8, "icon_asset": "assets/avatar-icons/ssr/p1-r4-c3.png", "verified_by": "user"},
+    {"page": 1, "row": 4, "column": 4, "rarity": "SSR", "canonical_name": "守夜人", "aliases": [], "snapshot_count": 5, "icon_asset": "assets/avatar-icons/ssr/p1-r4-c4.png", "verified_by": "user"},
+    {"page": 1, "row": 4, "column": 5, "rarity": "SSR", "canonical_name": "源稚生", "aliases": ["象龟"], "snapshot_count": 30, "icon_asset": "assets/avatar-icons/ssr/p1-r4-c5.png", "verified_by": "user"},
+
+    {"page": 2, "row": 1, "column": 1, "rarity": "SSR", "canonical_name": "源稚女", "aliases": ["原稚女"], "snapshot_count": 16, "icon_asset": "assets/avatar-icons/ssr/p2-r1-c1.png", "verified_by": "user"},
+    {"page": 2, "row": 1, "column": 2, "rarity": "SSR", "canonical_name": "康斯坦丁", "aliases": [], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p2-r1-c2.png", "verified_by": "user"},
+    {"page": 2, "row": 1, "column": 3, "rarity": "SSR", "canonical_name": "上杉越", "aliases": [], "snapshot_count": 7, "icon_asset": "assets/avatar-icons/ssr/p2-r1-c3.png", "verified_by": "user"},
+    {"page": 2, "row": 1, "column": 4, "rarity": "SSR", "canonical_name": "诺顿", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r1-c4.png", "verified_by": "user"},
+    {"page": 2, "row": 1, "column": 5, "rarity": "SSR", "canonical_name": "芬里厄", "aliases": [], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p2-r1-c5.png", "verified_by": "user"},
+    {"page": 2, "row": 2, "column": 1, "rarity": "SSR", "canonical_name": "风间琉璃", "aliases": ["花间琉璃"], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p2-r2-c1.png", "verified_by": "user"},
+    {"page": 2, "row": 2, "column": 2, "rarity": "SSR", "canonical_name": "楚天骄", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r2-c2.png", "verified_by": "user"},
+    {"page": 2, "row": 2, "column": 3, "rarity": "SSR", "canonical_name": "耶梦加得", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r2-c3.png", "verified_by": "user"},
+    {"page": 2, "row": 2, "column": 4, "rarity": "SSR", "canonical_name": "EVA", "aliases": ["Eva", "eva"], "snapshot_count": 2, "icon_asset": "assets/avatar-icons/ssr/p2-r2-c4.png", "verified_by": "user"},
+    {"page": 2, "row": 2, "column": 5, "rarity": "SSR", "canonical_name": "龙刃酒德麻衣", "aliases": ["龙刃", "龙刃麻衣"], "snapshot_count": 3, "icon_asset": "assets/avatar-icons/ssr/p2-r2-c5.png", "verified_by": "user"},
+    {"page": 2, "row": 3, "column": 1, "rarity": "SSR", "canonical_name": "强欲", "aliases": [], "snapshot_count": 9, "icon_asset": "assets/avatar-icons/ssr/p2-r3-c1.png", "verified_by": "user"},
+    {"page": 2, "row": 3, "column": 2, "rarity": "SSR", "canonical_name": "贪婪", "aliases": [], "snapshot_count": 7, "icon_asset": "assets/avatar-icons/ssr/p2-r3-c2.png", "verified_by": "user"},
+    {"page": 2, "row": 3, "column": 3, "rarity": "SSR", "canonical_name": "饕餮", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r3-c3.png", "verified_by": "user"},
+    {"page": 2, "row": 3, "column": 4, "rarity": "SSR", "canonical_name": "傲慢", "aliases": [], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r3-c4.png", "verified_by": "user"},
+    {"page": 2, "row": 3, "column": 5, "rarity": "SSR", "canonical_name": "巫女诺诺", "aliases": [], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p2-r3-c5.png", "verified_by": "user"},
+    {"page": 2, "row": 4, "column": 1, "rarity": "SSR", "canonical_name": "龙马樱井小暮", "aliases": ["龙马樱井小幕"], "snapshot_count": 10, "icon_asset": "assets/avatar-icons/ssr/p2-r4-c1.png", "verified_by": "user"},
+    {"page": 2, "row": 4, "column": 2, "rarity": "SSR", "canonical_name": "天演苏恩曦", "aliases": ["天演苏恩熙"], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p2-r4-c2.png", "verified_by": "user"},
+    {"page": 2, "row": 4, "column": 3, "rarity": "SSR", "canonical_name": "弑罪路明非", "aliases": ["释罪路明非"], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p2-r4-c3.png", "verified_by": "user"},
+    {"page": 2, "row": 4, "column": 4, "rarity": "SSR", "canonical_name": "源稚生&源稚女", "aliases": ["双源"], "snapshot_count": 5, "icon_asset": "assets/avatar-icons/ssr/p2-r4-c4.png", "verified_by": "user"},
+    {"page": 2, "row": 4, "column": 5, "rarity": "SSR", "canonical_name": "影镰恺撒", "aliases": ["影镰凯撒"], "snapshot_count": 4, "icon_asset": "assets/avatar-icons/ssr/p2-r4-c5.png", "verified_by": "user"},
+
+    {"page": 3, "row": 1, "column": 1, "rarity": "SSR", "canonical_name": "剑御苏茜", "aliases": ["剑苏"], "snapshot_count": 7, "icon_asset": "assets/avatar-icons/ssr/p3-r1-c1.png", "verified_by": "user"},
+    {"page": 3, "row": 1, "column": 2, "rarity": "SSR", "canonical_name": "隐狩矢吹樱", "aliases": ["隐狩"], "snapshot_count": 6, "icon_asset": "assets/avatar-icons/ssr/p3-r1-c2.png", "verified_by": "user"},
+
+    {"page": 3, "row": 1, "column": 3, "rarity": "SR", "canonical_name": "叶胜", "aliases": [], "snapshot_count": 30, "icon_asset": "assets/avatar-icons/sr/p3-r1-c3.png", "verified_by": "user"},
+    {"page": 3, "row": 1, "column": 4, "rarity": "SR", "canonical_name": "酒德亚纪", "aliases": [], "snapshot_count": 30, "icon_asset": "assets/avatar-icons/sr/p3-r1-c4.png", "verified_by": "user"},
+    {"page": 3, "row": 1, "column": 5, "rarity": "SR", "canonical_name": "古德", "aliases": ["古德里安"], "snapshot_count": 36, "icon_asset": "assets/avatar-icons/sr/p3-r1-c5.png", "verified_by": "user"},
+    {"page": 3, "row": 2, "column": 1, "rarity": "SR", "canonical_name": "苏茜", "aliases": [], "snapshot_count": 25, "icon_asset": "assets/avatar-icons/sr/p3-r2-c1.png", "verified_by": "user"},
+    {"page": 3, "row": 2, "column": 2, "rarity": "SR", "canonical_name": "曼斯", "aliases": [], "snapshot_count": 27, "icon_asset": "assets/avatar-icons/sr/p3-r2-c2.png", "verified_by": "user"},
+    {"page": 3, "row": 2, "column": 3, "rarity": "SR", "canonical_name": "曼因", "aliases": [], "snapshot_count": 33, "icon_asset": "assets/avatar-icons/sr/p3-r2-c3.png", "verified_by": "user"},
+    {"page": 3, "row": 2, "column": 4, "rarity": "SR", "canonical_name": "施耐德", "aliases": [], "snapshot_count": 33, "icon_asset": "assets/avatar-icons/sr/p3-r2-c4.png", "verified_by": "user"},
+    {"page": 3, "row": 2, "column": 5, "rarity": "SR", "canonical_name": "樱井小暮", "aliases": [], "snapshot_count": 32, "icon_asset": "assets/avatar-icons/sr/p3-r2-c5.png", "verified_by": "user"},
+    {"page": 3, "row": 3, "column": 1, "rarity": "SR", "canonical_name": "樱井七海", "aliases": [], "snapshot_count": 28, "icon_asset": "assets/avatar-icons/sr/p3-r3-c1.png", "verified_by": "user"},
+
+    {"page": 3, "row": 3, "column": 2, "rarity": "R", "canonical_name": "矢吹樱", "aliases": [], "snapshot_count": 23, "icon_asset": "assets/avatar-icons/r/p3-r3-c2.png", "verified_by": "user"},
+    {"page": 3, "row": 3, "column": 3, "rarity": "R", "canonical_name": "奇兰", "aliases": [], "snapshot_count": 23, "icon_asset": "assets/avatar-icons/r/p3-r3-c3.png", "verified_by": "user"},
+    {"page": 3, "row": 3, "column": 4, "rarity": "R", "canonical_name": "雷蒙德", "aliases": [], "snapshot_count": 25, "icon_asset": "assets/avatar-icons/r/p3-r3-c4.png", "verified_by": "user"},
+    {"page": 3, "row": 3, "column": 5, "rarity": "R", "canonical_name": "塞尔玛", "aliases": [], "snapshot_count": 32, "icon_asset": "assets/avatar-icons/r/p3-r3-c5.png", "verified_by": "user"},
+    {"page": 3, "row": 4, "column": 1, "rarity": "R", "canonical_name": "富山雅史", "aliases": [], "snapshot_count": 31, "icon_asset": "assets/avatar-icons/r/p3-r4-c1.png", "verified_by": "user"},
+    {"page": 3, "row": 4, "column": 2, "rarity": "R", "canonical_name": "万博倩", "aliases": [], "snapshot_count": 21, "icon_asset": "assets/avatar-icons/r/p3-r4-c2.png", "verified_by": "user"},
+    {"page": 3, "row": 4, "column": 3, "rarity": "R", "canonical_name": "高幂", "aliases": [], "snapshot_count": 26, "icon_asset": "assets/avatar-icons/r/p3-r4-c3.png", "verified_by": "user"}
+  ]
+}

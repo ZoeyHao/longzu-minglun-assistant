@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "note": "Only workbook strategy-page rows that are absent from the five base element sheets. Missing attributes remain unknown rather than inferred.",
+  "combos": [
+    {
+      "element": "精神",
+      "wheel": "攻略页补充",
+      "name": "时空守望人",
+      "stars": 3,
+      "effects": ["生命+15000", "精神元素+80", "全元素+20"],
+      "members": ["皇女零", "楚天骄", "康斯坦丁", "风间琉璃"],
+      "source": "精神点法（老手向）!A5:I5",
+      "missing_fields": ["命轮值"]
+    }
+  ]
+}
