@@ -143,8 +143,8 @@ export default function Home() {
     setInv({ wheel, role, roleInfinite, srRInfinite: infRar.includes('SR') && infRar.includes('R') })
     const main = p.main_element || '精神'
     const chain = p.objective || []
-    const mainChain = [`${main}元素`, `${main}元素%`, '消耗', '攻击', '攻击%', '命轮值']
-    const consumeChain = ['消耗', `${main}元素`, `${main}元素%`, '攻击', '攻击%', '命轮值']
+    const mainChain = buildChain({ mainElement: main, objectivePreset: 'main', customChain: '' })
+    const consumeChain = buildChain({ mainElement: main, objectivePreset: 'consume', customChain: '' })
     const eq = (a: string[], b: string[]) => a.join('|') === b.join('|')
     setParams({
       nick: rec.nick,
@@ -163,8 +163,31 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0b0f1a] text-slate-100 [background-image:radial-gradient(70rem_32rem_at_50%_-8%,rgba(245,158,11,0.07),transparent)]">
-      <div className="mx-auto max-w-3xl px-3 pb-16 pt-6 sm:px-6 lg:max-w-6xl">
-        <header className="relative mb-5 overflow-hidden rounded-3xl border border-amber-500/15 bg-slate-900/60 px-4 py-5 shadow-2xl sm:px-6 sm:py-6">
+      <div className="mx-auto max-w-3xl px-3 pb-16 pt-3 sm:px-6 lg:max-w-6xl">
+        <nav
+          aria-label="页面导航"
+          className="sticky top-3 z-40 mb-4 flex items-center justify-between gap-3 rounded-2xl border border-slate-700/70 bg-slate-950/80 px-3 py-2 shadow-xl shadow-black/20 backdrop-blur-xl sm:px-4"
+        >
+          <a href="#top" className="flex shrink-0 items-center gap-2 text-sm font-bold text-slate-100 transition-colors hover:text-amber-300">
+            <span className="h-2 w-2 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.8)]" />
+            <span className="hidden sm:inline">命轮助手</span>
+          </a>
+          <div className="flex items-center gap-1 overflow-x-auto text-xs text-slate-400 [scrollbar-width:none]">
+            <a href="#inventory" className="whitespace-nowrap rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-800 hover:text-amber-200">库存</a>
+            <a href="#target" className="whitespace-nowrap rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-800 hover:text-amber-200">目标</a>
+            <a href="#result-anchor" className="whitespace-nowrap rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-800 hover:text-amber-200">方案</a>
+            <button
+              type="button"
+              onClick={() => setShowDataInfo(true)}
+              disabled={!data}
+              className="whitespace-nowrap rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-800 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              数据说明
+            </button>
+          </div>
+        </nav>
+
+        <header id="top" className="relative mb-5 scroll-mt-24 overflow-hidden rounded-3xl border border-amber-500/15 bg-slate-900/60 px-4 py-5 shadow-2xl sm:px-6 sm:py-6">
           <div className="pointer-events-none absolute -right-14 -top-20 h-52 w-52 rounded-full border border-amber-400/10 shadow-[0_0_80px_rgba(245,158,11,0.12)]" />
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-amber-400/70">Destiny Wheel Planner</p>
           <h1 className="bg-gradient-to-r from-amber-200 via-amber-400 to-orange-400 bg-clip-text text-2xl font-black tracking-tight text-transparent sm:text-3xl">
@@ -201,7 +224,7 @@ export default function Home() {
 
         {data && (
           <div className="space-y-4 lg:grid lg:grid-cols-12 lg:items-start lg:gap-5 lg:space-y-0">
-            <div className="lg:col-span-5">
+            <div id="inventory" className="scroll-mt-24 lg:col-span-5">
               <InventorySection
                 data={data}
                 value={inv}
@@ -227,7 +250,7 @@ export default function Home() {
                 }
               />
             </div>
-            <div className="space-y-4 lg:col-span-7">
+            <div id="target" className="scroll-mt-24 space-y-4 lg:col-span-7">
               <ParamsSection data={data} value={params} onChange={setParams} onRun={run} running={running} />
               {runError && (
                 <div className="rounded-xl border border-rose-500/40 bg-rose-500/10 p-3 text-sm text-rose-300">{runError}</div>
@@ -238,7 +261,7 @@ export default function Home() {
               {!result && !running && wheelCount === 0 && (
                 <p className="text-center text-xs text-slate-600">提示：点「① 库存」旁的上传图标，可一键填入示例体验完整流程</p>
               )}
-              <div id="result-anchor" />
+              <div id="result-anchor" className="scroll-mt-24" />
               {result && <ResultSection result={result} onSave={saveCurrent} saving={saving} />}
             </div>
           </div>
