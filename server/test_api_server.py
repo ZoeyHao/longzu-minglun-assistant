@@ -160,6 +160,30 @@ class TestHTTPBoundary(unittest.TestCase):
         )
         self.assertEqual(status, 403)
 
+    def test_recognize_accepts_large_base64_image_strings(self):
+        # 回归：形状校验曾把超长 Base64 字符串误判为「请求字段过长」
+        import base64
+        import random
+
+        buf = io.BytesIO()
+        random.seed(7)
+        pixels = bytes(random.randrange(256) for _ in range(64 * 64 * 3))
+        Image.frombytes("RGB", (64, 64), pixels).save(buf, format="PNG")
+        data_url = "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("ascii")
+        self.assertGreater(len(data_url), 2000)  # 必须超过通用字符串上限才有回归意义
+        body = json.dumps({"images": [data_url]}).encode("utf-8")
+        headers = {"Content-Type": "application/json", "Content-Length": str(len(body))}
+        with patch("api_server.run_script", return_value=(0, '{"results": []}', "")):
+            status, _, payload = self.request("POST", "/api/recognize", body, headers)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(payload)["results"], [])
+
+    def test_recognize_rejects_non_string_image_entries(self):
+        body = json.dumps({"images": [{"evil": "x" * 3000}]}).encode("utf-8")
+        headers = {"Content-Type": "application/json", "Content-Length": str(len(body))}
+        status, _, _ = self.request("POST", "/api/recognize", body, headers)
+        self.assertEqual(status, 400)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

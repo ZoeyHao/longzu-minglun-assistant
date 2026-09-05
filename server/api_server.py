@@ -415,7 +415,7 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(origin)
         return parsed.scheme in {"http", "https"} and parsed.netloc == (self.headers.get("Host") or "")
 
-    def _read_json(self, max_bytes: int):
+    def _read_json(self, max_bytes: int, *, validate_shape: bool = True):
         if (self.headers.get("Transfer-Encoding") or "").strip():
             self.close_connection = True
             raise RequestError(400, "不支持分块请求体")
@@ -446,7 +446,8 @@ class Handler(BaseHTTPRequestHandler):
             payload = json.loads(body.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError):
             raise RequestError(400, "JSON 格式无效") from None
-        validate_json_shape(payload)
+        if validate_shape:
+            validate_json_shape(payload)
         return payload
 
     def _reject_request(self, exc: RequestError):
@@ -559,7 +560,8 @@ class Handler(BaseHTTPRequestHandler):
             self.close_connection = True
             return
         try:
-            request = self._read_json(limits[path])
+            # 截图识别请求包含超长 Base64 字符串，走专用校验（decode_image_data_url 已限制格式与大小）
+            request = self._read_json(limits[path], validate_shape=path != "/api/recognize")
         except RequestError as exc:
             self._reject_request(exc)
             return
@@ -600,6 +602,8 @@ class Handler(BaseHTTPRequestHandler):
                     return
                 if len(images) > MAX_IMAGES:
                     raise RequestError(400, f"一次最多识别 {MAX_IMAGES} 张图片")
+                if any(not isinstance(item, str) for item in images):
+                    raise RequestError(400, "图片内容无效")
                 total_decoded = 0
                 for i, data_url in enumerate(images):
                     raw, ext = decode_image_data_url(data_url)
