@@ -36,6 +36,9 @@ from plan_minglun import parse_attributes  # noqa: E402
 TIERS = ["白", "绿", "蓝", "紫", "橙", "彩"]
 ADV_TO_FINAL = len(TIERS) - 1  # 5 次进阶到彩0
 INF = 10 ** 9
+MAX_COUNT = 1_000_000
+MAX_MAP_ITEMS = 100
+MAX_OBJECTIVES = 12
 LIMITED_COST = {"绘梨衣": 15}
 DEFAULT_LIMITED_COST = 30
 ATTRIBUTE_ALIASES = {
@@ -100,26 +103,65 @@ def fail(message: str, **extra) -> None:
     raise SystemExit(0)
 
 
+def validated_count(value, field: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int) or not 0 <= value <= MAX_COUNT:
+        fail(f"{field} 必须是 0 到 {MAX_COUNT} 的整数")
+    return value
+
+
+def validated_count_map(value, field: str) -> dict[str, int]:
+    if value is None:
+        return {}
+    if not isinstance(value, dict) or len(value) > MAX_MAP_ITEMS:
+        fail(f"{field} 格式无效或字段过多")
+    result: dict[str, int] = {}
+    for key, count in value.items():
+        if not isinstance(key, str) or not 1 <= len(key) <= 32:
+            fail(f"{field} 包含无效角色名")
+        result[QM.canonical_name(key)] = validated_count(count, f"{field}.{key}")
+    return result
+
+
+def validated_name_list(value, field: str, *, max_items: int = MAX_MAP_ITEMS) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list) or len(value) > max_items:
+        fail(f"{field} 格式无效或项目过多")
+    if any(not isinstance(item, str) or not 1 <= len(item) <= 32 for item in value):
+        fail(f"{field} 包含无效项目")
+    return value
+
+
 def main() -> None:
     payload = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        fail("请求内容必须是对象")
 
-    elements_req = payload.get("elements") or ["精神"]
+    elements_req = validated_name_list(payload.get("elements") or ["精神"], "elements", max_items=5)
+    allowed_elements = {"火", "风", "水", "土", "精神", "全部"}
+    if any(str(e).replace("元素", "") not in allowed_elements for e in elements_req):
+        fail("elements 包含未知元素")
     if "全部" in elements_req:
         elements = {"火", "风", "水", "土", "精神"}
     else:
         elements = {str(e).replace("元素", "") for e in elements_req}
     main_element = str(payload.get("main_element") or "精神").replace("元素", "")
-    chain = payload.get("objective") or default_chain(main_element)
+    if main_element not in allowed_elements - {"全部"}:
+        fail("main_element 包含未知元素")
+    chain = validated_name_list(payload.get("objective") or default_chain(main_element), "objective", max_items=MAX_OBJECTIVES)
 
-    inventory = {QM.canonical_name(k): int(v) for k, v in (payload.get("inventory") or {}).items() if int(v) > 0}
-    wheel_inf_rarities = set(payload.get("wheel_infinite_rarities") or ["SR", "R"])
-    wheel_inf_names = {QM.canonical_name(n) for n in (payload.get("wheel_infinite") or [])}
-    role_frags = {QM.canonical_name(k): int(v) for k, v in (payload.get("role_fragments") or {}).items()}
-    role_inf_names = {QM.canonical_name(n) for n in (payload.get("role_fragments_infinite") or [])}
+    inventory = {k: v for k, v in validated_count_map(payload.get("inventory"), "inventory").items() if v > 0}
+    wheel_inf_raw = payload.get("wheel_infinite_rarities") if "wheel_infinite_rarities" in payload else ["SR", "R"]
+    wheel_inf_rarities = set(validated_name_list(wheel_inf_raw, "wheel_infinite_rarities", max_items=2))
+    if not wheel_inf_rarities <= {"SR", "R"}:
+        fail("wheel_infinite_rarities 仅支持 SR、R")
+    wheel_inf_names = {QM.canonical_name(n) for n in validated_name_list(payload.get("wheel_infinite"), "wheel_infinite")}
+    role_frags = validated_count_map(payload.get("role_fragments"), "role_fragments")
+    role_inf_names = {QM.canonical_name(n) for n in validated_name_list(payload.get("role_fragments_infinite"), "role_fragments_infinite")}
     # 旧协议兼容：仅在未提供逐角色开关时生效；新前端恒发 role_fragments_infinite
     role_unlisted_infinite = bool(payload.get("role_unlisted_infinite", False)) and "role_fragments_infinite" not in payload
-    ur_cost = {QM.canonical_name(k): int(v) for k, v in (payload.get("ur_advance_cost") or {}).items() if int(v) > 0}
-    selectable_total = int(payload.get("selectable") or 0)
+    ur_cost = {k: v for k, v in validated_count_map(payload.get("ur_advance_cost"), "ur_advance_cost").items() if v > 0}
+    selectable_total = validated_count(payload.get("selectable") or 0, "selectable")
 
     pool = json.loads((SKILL / "references" / "ssr-pool.json").read_text(encoding="utf-8"))
     common_ssr = {QM.canonical_name(n) for n in pool["常驻SSR"]}
