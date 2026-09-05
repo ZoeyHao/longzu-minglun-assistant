@@ -1,0 +1,89 @@
+# Put these directives inside nginx's http {} block.
+limit_req_zone $binary_remote_addr zone=minglun_read:10m rate=30r/m;
+limit_req_zone $binary_remote_addr zone=minglun_plan:10m rate=6r/m;
+limit_req_zone $binary_remote_addr zone=minglun_recognize:10m rate=3r/m;
+limit_req_zone $binary_remote_addr zone=minglun_write:10m rate=20r/m;
+limit_conn_zone $binary_remote_addr zone=minglun_conn:10m;
+
+server {
+    listen 80;
+    server_name minglun.example.com;
+    return 301 https://minglun.example.com$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name minglun.example.com;
+    server_tokens off;
+
+    ssl_certificate /etc/letsencrypt/live/minglun.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/minglun.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=()" always;
+
+    client_body_timeout 15s;
+    client_header_timeout 15s;
+    keepalive_timeout 20s;
+    send_timeout 30s;
+
+    location = /longzu/minglun/v2/api/plan {
+        limit_req zone=minglun_plan burst=2 nodelay;
+        limit_conn minglun_conn 4;
+        client_max_body_size 128k;
+        # Keep this slightly above PLAN_TIMEOUT_SECONDS in server/api_server.py.
+        proxy_read_timeout 160s;
+        proxy_pass http://127.0.0.1:8321/api/plan;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /longzu/minglun/v2/api/recognize {
+        limit_req zone=minglun_recognize burst=1 nodelay;
+        limit_conn minglun_conn 2;
+        client_max_body_size 32m;
+        proxy_request_buffering on;
+        proxy_read_timeout 95s;
+        proxy_pass http://127.0.0.1:8321/api/recognize;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /longzu/minglun/v2/api/history {
+        limit_req zone=minglun_write burst=8 nodelay;
+        limit_conn minglun_conn 6;
+        client_max_body_size 256k;
+        proxy_pass http://127.0.0.1:8321/api/history;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location ^~ /longzu/minglun/v2/api/ {
+        limit_req zone=minglun_read burst=10 nodelay;
+        limit_conn minglun_conn 8;
+        client_max_body_size 256k;
+        proxy_pass http://127.0.0.1:8321/api/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Build with: npm run build -- --base=/longzu/minglun/v2/
+    location = /longzu/minglun/v2 {
+        return 301 /longzu/minglun/v2/;
+    }
+    location = /longzu/minglun/v2/ {
+        alias /srv/minglun-assistant/dist/index.html;
+    }
+    location ~ ^/longzu/minglun/v2/(.+)$ {
+        alias /srv/minglun-assistant/dist/$1;
+    }
+}

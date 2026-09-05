@@ -107,6 +107,10 @@ export default function Home() {
 
   const saveCurrent = async () => {
     if (!result || !lastPayload) return
+    if (result.status !== 'optimal') {
+      setSaveNote('当前结果未获得最优性认证，不能保存；请调整范围后重新生成')
+      return
+    }
     setSaving(true)
     setSaveNote('')
     const nick = params.nick.trim() || '未命名方案'

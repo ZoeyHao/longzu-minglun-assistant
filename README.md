@@ -10,7 +10,7 @@
 
 - **库存录入**：逐角色填写，支持三种自动填充方式（可叠加使用，最终汇入同一张表）：
   - 口述文本解析（如「恺撒56，陈墨瞳40，……碎片方面：……」）
-  - 命盘「物品详情」弹窗截图离线识别（模板匹配 + 数字 OCR，不上传任何服务器）
+  - 命盘「物品详情」弹窗截图识别（图片上传至本站 API，写入临时文件完成模板匹配与数字 OCR，处理后立即删除）
   - 手动微调（解析结果都可人工修正）
 - **角色碎片 ∞ 开关**：常驻 SSR 默认无限、限定 SSR 默认按 0，逐角色可切换
 - **MILP 求解**：按字典序目标链（如 精神元素 → 精神元素% → 消耗 → …）逐目标认证最优，输出 `optimal` 即数学证明的全局最优
@@ -57,12 +57,16 @@ python3 server/test_api_server.py  # 历史方案隔离与保留策略
 
 ## 服务器部署（生产）
 
-- `server/api_server.py`：纯标准库 HTTP 服务（默认 127.0.0.1:8321），路由：
+- `server/api_server.py`：轻量 HTTP 服务（默认 127.0.0.1:8321），路由：
   - `GET /api/game-data` 游戏数据 · `GET /api/combos` 组合明细 · `GET /api/combos.xlsx` Excel 导出
   - `POST /api/plan` 求解 · `POST /api/recognize` 截图识别
   - `GET/POST/DELETE /api/history` 私有历史方案（请求必须携带浏览器生成的 `X-Minglun-Owner`；服务端只保存其 SHA-256）
 - 前端静态构建：`npx vite build --base=<你的部署路径>/`
 - 建议 nginx 反代 `/api/` 到 8321，systemd 托管 `api_server.py`；环境变量：`MINGLUN_SKILL_DIR`（数据目录，默认 `server/skill`）、`MINGLUN_RECOGNIZER_DIR`、`MINGLUN_PORT`
+- 上线必须启用 HTTPS；可从 `deploy/nginx-minglun.conf.example` 和 `deploy/minglun-api.service.example` 开始配置，并替换示例域名、证书和路径
+- API 内置请求体上限、图片格式/像素校验、每 IP 基础频率限制和昂贵任务并发限制；nginx 限流与 systemd 资源配额是必须保留的第二层防护
+- 历史方案单条最多 256 KB、每浏览器最多 4 MB、全站最多 16 MB；建议将 `MINGLUN_HISTORY_FILE` 指向仅服务账号可读写的 `/var/lib` 路径
+- `MINGLUN_ALLOWED_ORIGINS` 可配置逗号分隔的正式站点 Origin；生产环境应设置为 HTTPS 域名
 
 ## 目录结构
 
