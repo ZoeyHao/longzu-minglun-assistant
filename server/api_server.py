@@ -51,6 +51,7 @@ MAX_IMAGE_BYTES = 6 * 1024 * 1024
 MAX_IMAGE_PIXELS = 12_000_000
 MAX_IMAGE_DIMENSION = 8192
 MAX_IMAGES = 6
+PLAN_TIMEOUT_SECONDS = 150
 MAX_JSON_DEPTH = 8
 MAX_JSON_NODES = 15_000
 
@@ -568,9 +569,12 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 tmp.write(json.dumps(request, ensure_ascii=False))
                 tmp.close()
-                code, out, err = run_script("engine.py", [tmp.name], 90, PLAN_SLOTS)
+                code, out, err = run_script("engine.py", [tmp.name], PLAN_TIMEOUT_SECONDS, PLAN_SLOTS)
                 if code == -2:
                     self._send_json(429, {"error": err}, headers={"Retry-After": "5"})
+                    return
+                if code == -1:
+                    self._send_json(504, {"error": "计算超时，请减少参与元素或库存范围后重试"})
                     return
                 if code != 0:
                     sys.stderr.write(f"plan failed: {err.strip()[-800:]}\n")

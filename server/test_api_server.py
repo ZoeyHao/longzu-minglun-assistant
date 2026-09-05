@@ -139,6 +139,18 @@ class TestHTTPBoundary(unittest.TestCase):
         )
         self.assertEqual(status, 413)
 
+    def test_plan_timeout_returns_actionable_gateway_timeout(self):
+        body = b"{}"
+        with patch("api_server.run_script", return_value=(-1, "", "计算超时")):
+            status, _, payload = self.request(
+                "POST",
+                "/api/plan",
+                body,
+                {"Content-Type": "application/json", "Content-Length": str(len(body))},
+            )
+        self.assertEqual(status, 504)
+        self.assertIn("减少参与元素", json.loads(payload)["error"])
+
     def test_cross_origin_write_is_rejected(self):
         status, _, _ = self.request(
             "POST",

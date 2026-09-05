@@ -72,6 +72,7 @@ export default function ResultSection({
   const roleEntries = Object.entries(result.role_settlement).filter(([, v]) => v.stock > 0 || v.advances > 0)
   const wheelRemaining = Object.entries(result.wheel_remaining).filter(([, v]) => v !== '无限')
   const sel = result.selectable
+  const canSave = result.status === 'optimal'
 
   return (
     <section className="rounded-2xl border border-amber-500/30 bg-slate-900/60 p-4 shadow-xl">
@@ -86,10 +87,11 @@ export default function ResultSection({
           size="sm"
           variant="outline"
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || !canSave}
+          title={canSave ? '保存当前方案' : '只有获得最优性认证的方案才能保存'}
           className="ml-auto h-9 border-amber-500/40 bg-amber-500/10 text-xs text-amber-200 hover:bg-amber-500/20 hover:text-amber-100"
         >
-          {saving ? '保存中…' : '保存方案'}
+          {saving ? '保存中…' : canSave ? '保存方案' : '非最优结果不可保存'}
         </Button>
       </div>
 
