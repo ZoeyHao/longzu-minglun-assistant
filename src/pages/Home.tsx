@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { GameData, PlanResult } from '@/types'
-import { fetchGameData, runPlan, saveHistory, type HistoryRecord, type PlanPayload } from '@/lib/api'
+import { fetchGameData, fetchStats, runPlan, saveHistory, type HistoryRecord, type PlanPayload } from '@/lib/api'
 import InventorySection, { type InventoryState } from '@/sections/InventorySection'
 import ParamsSection, { type ParamsState } from '@/sections/ParamsSection'
 import { buildChain } from '@/lib/objective'
@@ -47,9 +47,11 @@ export default function Home() {
   const [saveNote, setSaveNote] = useState('')
   const [showHistory, setShowHistory] = useState(false)
   const [showDataInfo, setShowDataInfo] = useState(false)
+  const [plansServed, setPlansServed] = useState<number | null>(null)
 
   useEffect(() => {
     fetchGameData().then(setData).catch((e) => setLoadError(e instanceof Error ? e.message : String(e)))
+    fetchStats().then((s) => setPlansServed(s.plans)).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -97,6 +99,7 @@ export default function Home() {
       const r = await runPlan(payload)
       setResult(r)
       setLastPayload(payload)
+      fetchStats().then((s) => setPlansServed(s.plans)).catch(() => {})
       setTimeout(() => document.getElementById('result-anchor')?.scrollIntoView({ behavior: 'smooth' }), 50)
     } catch (e) {
       setRunError(e instanceof Error ? e.message : String(e))
@@ -214,6 +217,11 @@ export default function Home() {
                 </svg>
                 {data.combo_total} 个组合 · 查看数据
               </button>
+            )}
+            {plansServed !== null && (
+              <span className="rounded-full border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-400">
+                已生成 <span className="font-semibold text-amber-300">{plansServed}</span> 套命轮方案
+              </span>
             )}
             <span className="rounded-full border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-400">数据：君度</span>
             <span className="rounded-full border border-slate-700 bg-slate-950/50 px-3 py-2 text-slate-400">技术：Roy、梧桐落</span>

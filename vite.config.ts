@@ -90,6 +90,27 @@ function summarize(rec: HistoryRec) {
   }
 }
 
+const STATS_FILE = path.join(SERVER_DIR, "stats.json")
+
+function loadStats(): Record<string, number> {
+  try {
+    const data = JSON.parse(fs.readFileSync(STATS_FILE, "utf-8"))
+    return data && typeof data === "object" ? data : {}
+  } catch {
+    return {}
+  }
+}
+
+function bumpStat(key: string) {
+  try {
+    const stats = loadStats()
+    stats[key] = (stats[key] || 0) + 1
+    fs.writeFileSync(STATS_FILE, JSON.stringify(stats), "utf-8")
+  } catch (e) {
+    console.error("stats bump failed", e instanceof Error ? e.name : "UnknownError")
+  }
+}
+
 function historyOwnerHash(req: import("http").IncomingMessage): string | null {
   const raw = req.headers["x-minglun-owner"]
   const token = String(Array.isArray(raw) ? raw[0] : raw || "").trim()
@@ -243,6 +264,10 @@ function minglunApi(): Plugin {
             res.end(gameDataCache)
             return
           }
+          if (url === "/api/stats" && req.method === "GET") {
+            sendJson(res, 200, { plans: loadStats().plans || 0 })
+            return
+          }
           if (url === "/api/plan" && req.method === "POST") {
             const body = await readBody(req, MAX_PLAN_BODY_BYTES)
             const tmp = path.join(os.tmpdir(), `minglun-plan-${Date.now()}-${Math.random().toString(36).slice(2)}.json`)
@@ -250,6 +275,7 @@ function minglunApi(): Plugin {
             try {
               const out = await runPython("engine.py", [tmp], 180_000)
               const parsed = JSON.parse(out)
+              if (parsed.status !== "error") bumpStat("plans")
               sendJson(res, parsed.status === "error" ? 400 : 200, parsed)
             } finally {
               fs.rmSync(tmp, { force: true })

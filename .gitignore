@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 server/history.json
+server/stats.json
 
 # Python
 __pycache__/

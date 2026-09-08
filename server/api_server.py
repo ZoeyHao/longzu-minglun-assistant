@@ -40,6 +40,8 @@ GAME_DATA_CACHE: dict[str, str | bytes] = {}
 LOCK = threading.Lock()
 HISTORY_FILE = Path(os.environ.get("MINGLUN_HISTORY_FILE", str(HERE / "history.json")))
 HISTORY_LOCK = threading.Lock()
+STATS_FILE = Path(os.environ.get("MINGLUN_STATS_FILE", str(HERE / "stats.json")))
+STATS_LOCK = threading.Lock()
 MAX_HISTORY = 100
 MAX_HISTORY_TOTAL = 5000
 MAX_HISTORY_RECORD_BYTES = 256 * 1024
@@ -63,6 +65,7 @@ RATE_LIMITS = {
     ("POST", "/api/plan"): (6, 60),
     ("POST", "/api/recognize"): (3, 60),
     ("GET", "/api/combos.xlsx"): (10, 60),
+    ("GET", "/api/stats"): (60, 60),
     ("GET", "/api/history"): (60, 60),
     ("POST", "/api/history"): (30, 60),
     ("DELETE", "/api/history"): (30, 60),
@@ -150,6 +153,37 @@ def save_history(records: list[dict]) -> None:
 
 def json_size(value) -> int:
     return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+
+
+def load_stats() -> dict:
+    try:
+        data = json.loads(STATS_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def bump_stat(key: str) -> None:
+    """统计计数 +1（原子写入）；失败只记日志，不影响主流程。"""
+    try:
+        with STATS_LOCK:
+            stats = load_stats()
+            stats[key] = int(stats.get(key, 0)) + 1
+            data = json.dumps(stats, ensure_ascii=False).encode("utf-8")
+            fd, tmp_name = tempfile.mkstemp(prefix=".stats-", suffix=".tmp", dir=STATS_FILE.parent)
+            try:
+                os.fchmod(fd, 0o600)
+                with os.fdopen(fd, "wb") as tmp:
+                    tmp.write(data)
+                os.replace(tmp_name, STATS_FILE)
+            except Exception:
+                try:
+                    os.unlink(tmp_name)
+                except OSError:
+                    pass
+                raise
+    except Exception as exc:
+        sys.stderr.write(f"stats bump failed: {type(exc).__name__}\n")
 
 
 def append_history(records: list[dict], rec: dict) -> list[dict]:
@@ -475,6 +509,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/health":
             self._send_json(200, {"ok": True})
             return
+        if path == "/api/stats":
+            with STATS_LOCK:
+                stats = load_stats()
+            self._send_json(200, {"plans": int(stats.get("plans", 0))})
+            return
         if path == "/api/combos":
             with LOCK:
                 if "combos" not in GAME_DATA_CACHE:
@@ -583,6 +622,8 @@ class Handler(BaseHTTPRequestHandler):
                     self._send_json(500, {"error": "求解失败，请稍后重试"})
                     return
                 payload = json.loads(out)
+                if payload.get("status") != "error":
+                    bump_stat("plans")
                 self._send_json(400 if payload.get("status") == "error" else 200, payload)
             except (json.JSONDecodeError, OSError) as exc:
                 self._send_internal_error("plan response failed", exc)

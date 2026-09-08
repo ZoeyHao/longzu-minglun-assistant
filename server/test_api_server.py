@@ -160,6 +160,22 @@ class TestHTTPBoundary(unittest.TestCase):
         )
         self.assertEqual(status, 403)
 
+    def test_stats_endpoint_counts_successful_plans(self):
+        import tempfile
+        from pathlib import Path
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            stats_file = Path(tmpdir) / "stats.json"
+            with patch("api_server.STATS_FILE", stats_file):
+                with patch("api_server.run_script", return_value=(0, '{"status": "optimal", "plan": []}', "")):
+                    body = b"{}"
+                    headers = {"Content-Type": "application/json", "Content-Length": str(len(body))}
+                    status, _, _ = self.request("POST", "/api/plan", body, headers)
+                    self.assertEqual(status, 200)
+                status, _, payload = self.request("GET", "/api/stats")
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(payload)["plans"], 1)
+
     def test_recognize_accepts_large_base64_image_strings(self):
         # 回归：形状校验曾把超长 Base64 字符串误判为「请求字段过长」
         import base64

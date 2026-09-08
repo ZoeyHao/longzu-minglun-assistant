@@ -16,6 +16,12 @@ export async function fetchCombos(): Promise<CombosData> {
 
 export const combosExcelUrl = `${API}/combos.xlsx`
 
+export async function fetchStats(): Promise<{ plans: number }> {
+  const res = await fetch(`${API}/stats`)
+  if (!res.ok) throw new Error(`统计加载失败（${res.status}）`)
+  return res.json()
+}
+
 export interface PlanPayload {
   inventory: Record<string, number>
   wheel_infinite_rarities: string[]
