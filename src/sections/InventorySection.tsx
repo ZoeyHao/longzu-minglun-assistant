@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { CharInfo, GameData, ParseReport, RecognizeFileResult } from '@/types'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import type { CharInfo, GameData, ParseReport } from '@/types'
 import { parseInventoryText } from '@/lib/parseText'
-import { recognizeImages } from '@/lib/api'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -80,13 +79,9 @@ export default function InventorySection(props: {
   const isMobile = useIsMobile()
   const [text, setText] = useState('')
   const [report, setReport] = useState<ParseReport | null>(null)
-  const [shots, setShots] = useState<RecognizeFileResult[] | null>(null)
-  const [recognizing, setRecognizing] = useState(false)
-  const [shotError, setShotError] = useState('')
   const [showImport, setShowImport] = useState(false)
   const [query, setQuery] = useState('')
   const [openGroups, setOpenGroups] = useState<string[]>(() => isMobile ? [] : ['限定SSR', '常驻SSR'])
-  const fileRef = useRef<HTMLInputElement>(null)
 
   const groups = useMemo(() => {
     const g: Record<string, CharInfo[]> = {}
@@ -155,44 +150,6 @@ export default function InventorySection(props: {
     setReport(r)
   }
 
-  const onPickImages = async (files: FileList | null) => {
-    if (!files || !files.length) return
-    setShotError('')
-    setRecognizing(true)
-    setShots(null)
-    try {
-      const images = await Promise.all(
-        [...files].slice(0, 6).map(
-          (f) =>
-            new Promise<string>((resolve, reject) => {
-              const reader = new FileReader()
-              reader.onload = () => resolve(String(reader.result))
-              reader.onerror = reject
-              reader.readAsDataURL(f)
-            }),
-        ),
-      )
-      setShots(await recognizeImages(images))
-    } catch (e) {
-      setShotError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setRecognizing(false)
-      if (fileRef.current) fileRef.current.value = ''
-    }
-  }
-
-  const applyShots = () => {
-    if (!shots) return
-    const wheel = { ...value.wheel }
-    for (const f of shots) {
-      for (const cell of f.cells ?? []) {
-        if (!cell.name_confident || cell.count === null) continue
-        if (!(cell.name in wheel) || !cell.count_confident) wheel[cell.name] = String(cell.count)
-      }
-    }
-    onChange({ ...value, wheel })
-  }
-
   return (
     <section className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-4 shadow-xl">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -201,8 +158,8 @@ export default function InventorySection(props: {
           <button
             type="button"
             onClick={() => setShowImport(!showImport)}
-            title="导入（文本 / 截图）"
-            aria-label="导入（文本 / 截图）"
+            title="导入（文本）"
+            aria-label="导入（文本）"
             className={`flex h-9 items-center justify-center gap-1 rounded-lg border px-2 transition-colors ${
               showImport
                 ? 'border-amber-400/60 bg-amber-500/15 text-amber-300'
@@ -248,48 +205,9 @@ export default function InventorySection(props: {
               </div>
             )}
             <div className="border-t border-slate-800 pt-3">
-              <p className="mb-2 text-xs leading-5 text-slate-400">或上传命盘「物品详情」弹窗截图（可多选），离线识别后填入下表：</p>
-              <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickImages(e.target.files)} />
-              <div className="flex flex-wrap items-center gap-2">
-                <Button onClick={() => fileRef.current?.click()} disabled={recognizing} className="bg-amber-500 font-semibold text-slate-950 hover:bg-amber-400">
-                  {recognizing ? '识别中…（约几十秒）' : '选择截图并识别'}
-                </Button>
-                {shots && (
-                  <Button variant="outline" className="border-slate-600 text-slate-300" onClick={applyShots}>
-                    填入下表
-                  </Button>
-                )}
-              </div>
-              {shotError && <div className="mt-2 text-xs text-rose-300">{shotError}</div>}
-              {shots && (
-                <div className="mt-2 space-y-2">
-                  {shots.map((f, i) => (
-                    <div key={i} className="rounded-xl border border-slate-700 bg-slate-900/60 p-2.5">
-                      <div className="mb-1 text-xs text-slate-400">{f.file}</div>
-                      {f.error ? (
-                        <div className="text-xs text-rose-300">{f.error}</div>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {(f.cells ?? []).map((cell, j) => (
-                            <span
-                              key={j}
-                              className={`rounded-md px-1.5 py-0.5 text-xs ${
-                                cell.name_confident && cell.count_confident
-                                  ? 'bg-slate-800 text-slate-200'
-                                  : 'bg-amber-500/20 text-amber-300 ring-1 ring-amber-400/50'
-                              }`}
-                            >
-                              {cell.name}×{cell.count ?? '?'}{(!cell.name_confident || !cell.count_confident) && ' ⚠'}
-                            </span>
-                          ))}
-                          {(f.cells ?? []).length === 0 && <span className="text-xs text-slate-500">没有识别到格子</span>}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                  <p className="text-[11px] text-slate-500">⚠ 为低置信项（名称低置信的不填入），填入后请务必在下方核对修改。</p>
-                </div>
-              )}
+              <p className="text-xs leading-5 text-slate-500">
+                截图导入维护中，暂时下线优化；请先用上方文本导入，或在下方表格手动填写。
+              </p>
             </div>
           </div>
         </div>

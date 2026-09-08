@@ -201,7 +201,7 @@ export default function Home() {
             龙族：卡塞尔之门 · 命轮助手
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-            录入命轮与角色碎片，按主元素和库存目标生成可执行的最优方案。支持文本、截图和手动微调。
+            录入命轮与角色碎片，按主元素和库存目标生成可执行的最优方案。支持文本导入和手动微调。
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
             {data && (
